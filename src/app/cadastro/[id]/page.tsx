@@ -4,6 +4,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { FamiliaForm } from "@/components/FamiliaForm";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { idadeToFormValue } from "@/lib/idade";
 import { parseAcompanhantes } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +54,7 @@ export default async function EditarCadastroPage({ params }: Props) {
           criancas: familia.criancas.map((c) => ({
             id: c.id,
             nome: c.nome,
-            idade: c.idade ?? "",
+            idade: idadeToFormValue(c.idade),
             version: c.version,
             presente: c.presente,
             checkinEm: c.checkinEm?.toISOString() ?? null,

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { normalizeIdadeInput } from "@/lib/idade";
 import {
   normalizeAcompanhantes,
   parseAcompanhantes,
@@ -13,6 +14,11 @@ import {
 function emptyToNull(value: string | undefined | null) {
   const trimmed = (value ?? "").trim();
   return trimmed.length > 0 ? trimmed : null;
+}
+
+function normalizeIdade(value: string | undefined | null) {
+  const digits = normalizeIdadeInput(value ?? "");
+  return digits.length > 0 ? digits : null;
 }
 
 function validateForm(data: FamiliaFormData, isCreate: boolean) {
@@ -68,7 +74,7 @@ export async function createFamiliaAction(
       .filter((c) => !c._delete && c.nome.trim())
       .map((c) => ({
         nome: c.nome.trim(),
-        idade: emptyToNull(c.idade),
+        idade: normalizeIdade(c.idade),
         presente: false,
       }));
 
@@ -181,7 +187,7 @@ export async function updateFamiliaAction(
             },
             data: {
               nome: crianca.nome.trim(),
-              idade: emptyToNull(crianca.idade),
+              idade: normalizeIdade(crianca.idade),
               version: { increment: 1 },
             },
           });
@@ -194,7 +200,7 @@ export async function updateFamiliaAction(
             data: {
               responsavelId,
               nome: crianca.nome.trim(),
-              idade: emptyToNull(crianca.idade),
+              idade: normalizeIdade(crianca.idade),
               presente: false,
             },
           });

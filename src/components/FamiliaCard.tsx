@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckinButtons } from "@/components/CheckinButtons";
 import { alertasCrianca } from "@/lib/alertas";
+import { formatIdadeDisplay } from "@/lib/idade";
 import { formatDateTime } from "@/lib/timezone";
 import { parseAcompanhantes } from "@/lib/types";
 
@@ -112,7 +113,7 @@ export function FamiliaCard({
                   </span>
                 </div>
                 <p className="mt-0.5 text-xs text-[var(--muted)]">
-                  {crianca.idade || "Idade não informada"}
+                  {formatIdadeDisplay(crianca.idade)}
                   {crianca.presente && crianca.checkinEm
                     ? ` · ${formatDateTime(crianca.checkinEm)}`
                     : ""}

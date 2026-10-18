@@ -7,6 +7,7 @@ import {
   updateFamiliaAction,
 } from "@/actions/familia";
 import { undoCheckinCriancaAction } from "@/actions/checkin";
+import { normalizeIdadeInput } from "@/lib/idade";
 import type { AcompanhanteInput, CriancaInput, FamiliaFormData } from "@/lib/types";
 import { formatDateTime } from "@/lib/timezone";
 
@@ -406,14 +407,30 @@ export function FamiliaForm({ mode, initial }: Props) {
                   />
                 </div>
                 <div>
-                  <label className="label">Idade</label>
-                  <input
-                    className="field"
-                    value={c.idade}
-                    onChange={(e) => updateCrianca(index, { idade: e.target.value })}
-                    placeholder="Ex: 1 ano e 6 meses"
-                    disabled={pending}
-                  />
+                  <label className="label">Idade (anos)</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      className="field"
+                      value={c.idade}
+                      onChange={(e) =>
+                        updateCrianca(index, {
+                          idade: normalizeIdadeInput(e.target.value),
+                        })
+                      }
+                      placeholder="Ex: 8"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={2}
+                      disabled={pending}
+                      aria-describedby={`idade-help-${index}`}
+                    />
+                    <span className="shrink-0 text-sm font-extrabold text-[var(--muted)]">
+                      anos
+                    </span>
+                  </div>
+                  <p id={`idade-help-${index}`} className="mt-1 text-xs text-[var(--muted)]">
+                    Só números, até 2 dígitos. No card aparece automaticamente como “X anos”.
+                  </p>
                 </div>
                 {c.presente && (
                   <div className="flex flex-col gap-2">
