@@ -17,7 +17,10 @@ type Props = {
 function buildHref(params: { q?: string; letra?: string; page?: number }) {
   const sp = new URLSearchParams();
   if (params.q?.trim()) sp.set("q", params.q.trim());
-  if (params.letra && params.letra !== "TODOS") sp.set("letra", params.letra);
+  // Com busca ativa, letra não entra — evita esconder "Luiz Wagner" na letra W
+  if (!params.q?.trim() && params.letra && params.letra !== "TODOS") {
+    sp.set("letra", params.letra);
+  }
   if (params.page && params.page > 1) sp.set("page", String(params.page));
   const qs = sp.toString();
   return qs ? `/controle?${qs}` : "/controle";
@@ -27,7 +30,10 @@ export default async function ControlePage({ searchParams }: Props) {
   const { q = "", letra: letraRaw = "TODOS", page: pageRaw = "1" } =
     await searchParams;
 
-  const letra = letraRaw.trim().toUpperCase() || "TODOS";
+  const buscando = q.trim().length > 0;
+  const letra = buscando
+    ? "TODOS"
+    : letraRaw.trim().toUpperCase() || "TODOS";
   const pageRequested = Math.max(1, Number.parseInt(pageRaw, 10) || 1);
 
   const [totais, familias] = await Promise.all([getTotais(), searchFamilias(q)]);
@@ -42,7 +48,9 @@ export default async function ControlePage({ searchParams }: Props) {
   const start = (page - 1) * PAGE_SIZE;
   const pageItems = filtradas.slice(start, start + PAGE_SIZE);
 
-  const lettersPresent = new Set(familias.map((f) => firstLetterKey(f.nome)));
+  const lettersPresent = new Set(
+    (buscando ? [] : familias).map((f) => firstLetterKey(f.nome)),
+  );
 
   return (
     <main className="page">
@@ -75,7 +83,6 @@ export default async function ControlePage({ searchParams }: Props) {
       </section>
 
       <form className="mb-3" action="/controle" method="get">
-        {letra !== "TODOS" && <input type="hidden" name="letra" value={letra} />}
         <label className="label" htmlFor="q">
           Buscar
         </label>
@@ -85,7 +92,7 @@ export default async function ControlePage({ searchParams }: Props) {
             name="q"
             defaultValue={q}
             className="field"
-            placeholder="Nome ou telefone"
+            placeholder="Criança, responsável, telefone…"
             enterKeyHint="search"
             autoComplete="off"
             autoCapitalize="off"
@@ -94,44 +101,51 @@ export default async function ControlePage({ searchParams }: Props) {
             Ir
           </button>
         </div>
+        <p className="mt-1.5 text-xs text-[var(--muted)]">
+          Busca em qualquer parte do nome (ex.: “wagner” acha “Luiz Wagner”).
+        </p>
       </form>
 
       <section className="mb-3">
-        <p className="label">Filtrar por letra</p>
+        <p className="label">Filtrar por letra do responsável</p>
         <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
           <Link
-            href={buildHref({ q, letra: "TODOS" })}
+            href={buildHref({ letra: "TODOS" })}
             className={`btn shrink-0 px-3 text-sm ${
-              letra === "TODOS" ? "btn-primary" : "btn-secondary"
+              !buscando && letra === "TODOS" ? "btn-primary" : "btn-secondary"
             }`}
           >
             Todos
           </Link>
           {LETTERS.map((letter) => {
-            const active = letra === letter;
+            const active = !buscando && letra === letter;
             const has = lettersPresent.has(letter);
             return (
               <Link
                 key={letter}
-                href={buildHref({ q, letra: letter })}
+                href={buildHref({ letra: letter })}
                 className={`btn shrink-0 min-w-11 px-0 text-sm ${
                   active ? "btn-primary" : "btn-secondary"
-                } ${has ? "" : "opacity-40"}`}
-                aria-disabled={!has}
+                } ${buscando || has ? "" : "opacity-40"}`}
               >
                 {letter}
               </Link>
             );
           })}
         </div>
+        {buscando && (
+          <p className="mt-1.5 text-xs text-[var(--muted)]">
+            Filtro por letra pausado durante a busca.
+          </p>
+        )}
       </section>
 
       <p className="mb-3 text-sm text-[var(--muted)]">
         {filtradas.length} família{filtradas.length === 1 ? "" : "s"}
-        {letra !== "TODOS" ? ` · letra ${letra}` : ""}
-        {q ? ` · busca “${q}”` : ""}
+        {!buscando && letra !== "TODOS" ? ` · letra ${letra}` : ""}
+        {buscando ? ` · busca “${q.trim()}”` : ""}
         {" · "}ordem A–Z
-        {(q || letra !== "TODOS") && (
+        {(buscando || letra !== "TODOS") && (
           <>
             {" · "}
             <Link href="/controle" className="font-bold text-[var(--brand-blue)]">
@@ -143,7 +157,7 @@ export default async function ControlePage({ searchParams }: Props) {
 
       {pageItems.length === 0 ? (
         <div className="surface p-7 text-center text-[var(--muted)]">
-          {q || letra !== "TODOS"
+          {buscando || letra !== "TODOS"
             ? "Nenhum cadastro encontrado para este filtro."
             : "Nenhuma família cadastrada ainda."}
         </div>
@@ -171,7 +185,11 @@ export default async function ControlePage({ searchParams }: Props) {
         >
           {page > 1 ? (
             <Link
-              href={buildHref({ q, letra, page: page - 1 })}
+              href={buildHref({
+                q: buscando ? q : undefined,
+                letra,
+                page: page - 1,
+              })}
               className="btn btn-secondary flex-1"
             >
               Anterior
@@ -186,7 +204,11 @@ export default async function ControlePage({ searchParams }: Props) {
 
           {page < totalPages ? (
             <Link
-              href={buildHref({ q, letra, page: page + 1 })}
+              href={buildHref({
+                q: buscando ? q : undefined,
+                letra,
+                page: page + 1,
+              })}
               className="btn btn-secondary flex-1"
             >
               Próxima
@@ -198,7 +220,14 @@ export default async function ControlePage({ searchParams }: Props) {
       )}
 
       <nav className="dock" aria-label="Ações rápidas">
-        <Link href={buildHref({ q, letra, page })} className="btn btn-secondary">
+        <Link
+          href={buildHref({
+            q: buscando ? q : undefined,
+            letra,
+            page,
+          })}
+          className="btn btn-secondary"
+        >
           Atualizar
         </Link>
         <Link href="/cadastro" className="btn btn-green">
