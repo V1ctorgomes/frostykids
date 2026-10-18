@@ -3,22 +3,25 @@
 import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import type { ActionResult, FamiliaFormData } from "@/lib/types";
+import {
+  normalizeAcompanhantes,
+  parseAcompanhantes,
+  type ActionResult,
+  type FamiliaFormData,
+} from "@/lib/types";
 
 function emptyToNull(value: string | undefined | null) {
   const trimmed = (value ?? "").trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
-function normalizeAcompanhantes(list: string[] | undefined) {
-  return (list ?? [])
-    .map((nome) => nome.trim())
-    .filter((nome) => nome.length > 0);
-}
-
 function validateForm(data: FamiliaFormData, isCreate: boolean) {
   if (!data.nome.trim()) {
     return "Nome do responsável é obrigatório.";
+  }
+
+  if (data.ehColaborador && !data.area.trim()) {
+    return "Informe a área/setor do colaborador.";
   }
 
   const criancasAtivas = data.criancas.filter((c) => !c._delete && c.nome.trim());
@@ -72,7 +75,8 @@ export async function createFamiliaAction(
     const created = await prisma.responsavel.create({
       data: {
         nome: data.nome.trim(),
-        area: emptyToNull(data.area),
+        ehColaborador: Boolean(data.ehColaborador),
+        area: data.ehColaborador ? emptyToNull(data.area) : null,
         telefone: emptyToNull(data.telefone),
         acompanhantes: normalizeAcompanhantes(data.acompanhantes),
         criancas: { create: criancas },
@@ -96,7 +100,8 @@ export async function updateFamiliaAction(
   ActionResult<{
     id: string;
     version: number;
-    acompanhantes: string[];
+    ehColaborador: boolean;
+    acompanhantes: { nome: string; telefone: string }[];
     criancas: {
       id: string;
       nome: string;
@@ -131,7 +136,8 @@ export async function updateFamiliaAction(
         where: { id: responsavelId, version: expectedVersion },
         data: {
           nome: data.nome.trim(),
-          area: emptyToNull(data.area),
+          ehColaborador: Boolean(data.ehColaborador),
+          area: data.ehColaborador ? emptyToNull(data.area) : null,
           telefone: emptyToNull(data.telefone),
           acompanhantes: normalizeAcompanhantes(data.acompanhantes),
           version: { increment: 1 },
@@ -219,7 +225,8 @@ export async function updateFamiliaAction(
       data: {
         id: responsavelId,
         version: atualizado?.version ?? expectedVersion + 1,
-        acompanhantes: atualizado?.acompanhantes ?? [],
+        ehColaborador: atualizado?.ehColaborador ?? true,
+        acompanhantes: parseAcompanhantes(atualizado?.acompanhantes),
         criancas:
           atualizado?.criancas.map((c) => ({
             id: c.id,

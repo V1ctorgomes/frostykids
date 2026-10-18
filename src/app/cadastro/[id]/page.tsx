@@ -4,6 +4,7 @@ import { BrandMark } from "@/components/BrandMark";
 import { FamiliaForm } from "@/components/FamiliaForm";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { parseAcompanhantes } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -44,9 +45,10 @@ export default async function EditarCadastroPage({ params }: Props) {
         initial={{
           id: familia.id,
           nome: familia.nome,
+          ehColaborador: familia.ehColaborador,
           area: familia.area ?? "",
           telefone: familia.telefone ?? "",
-          acompanhantes: familia.acompanhantes,
+          acompanhantes: parseAcompanhantes(familia.acompanhantes),
           version: familia.version,
           criancas: familia.criancas.map((c) => ({
             id: c.id,

@@ -8,20 +8,23 @@ datasource db {
 }
 
 model Responsavel {
-  id            String    @id @default(cuid())
-  nome          String
-  area          String?
-  telefone      String?
-  acompanhantes String[]  @default([])
-  dataInscricao DateTime?
-  importKey     String?   @unique
-  version       Int       @default(0)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-  criancas      Crianca[]
+  id             String   @id @default(cuid())
+  nome           String
+  ehColaborador  Boolean  @default(true)
+  area           String?
+  telefone       String?
+  /// Lista JSON: [{ "nome": string, "telefone": string | null }]
+  acompanhantes  Json     @default("[]")
+  dataInscricao  DateTime?
+  importKey      String?  @unique
+  version        Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  criancas       Crianca[]
 
   @@index([nome])
   @@index([telefone])
+  @@index([ehColaborador])
 }
 
 model Crianca {

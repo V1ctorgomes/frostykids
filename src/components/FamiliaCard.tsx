@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CheckinButtons } from "@/components/CheckinButtons";
 import { formatDateTime } from "@/lib/timezone";
+import { parseAcompanhantes } from "@/lib/types";
 
 type Crianca = {
   id: string;
@@ -14,24 +15,51 @@ type Crianca = {
 type Props = {
   id: string;
   nome: string;
+  ehColaborador: boolean;
   area: string | null;
   telefone: string | null;
+  acompanhantes: unknown;
   criancas: Crianca[];
 };
 
-export function FamiliaCard({ id, nome, area, telefone, criancas }: Props) {
+export function FamiliaCard({
+  id,
+  nome,
+  ehColaborador,
+  area,
+  telefone,
+  acompanhantes,
+  criancas,
+}: Props) {
   const presentes = criancas.filter((c) => c.presente).length;
+  const acompList = parseAcompanhantes(acompanhantes);
 
   return (
     <article className="surface p-3.5">
       <div className="mb-3 flex items-start justify-between gap-2">
         <div className="min-w-0">
+          <div className="mb-1 flex flex-wrap items-center gap-1.5">
+            <span
+              className={`badge ${ehColaborador ? "badge-present" : "badge-pending"}`}
+            >
+              {ehColaborador ? "Colaborador" : "Sem vínculo"}
+            </span>
+          </div>
           <h2 className="truncate font-[family-name:var(--font-display)] text-[1.15rem] font-semibold leading-tight">
             {nome}
           </h2>
           <p className="mt-0.5 text-sm text-[var(--muted)]">
-            {[area, telefone].filter(Boolean).join(" · ") || "Sem área/telefone"}
+            {[ehColaborador ? area : null, telefone].filter(Boolean).join(" · ") ||
+              "Sem área/telefone"}
           </p>
+          {acompList.length > 0 && (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Acomp.:{" "}
+              {acompList
+                .map((a) => (a.telefone ? `${a.nome} (${a.telefone})` : a.nome))
+                .join(" · ")}
+            </p>
+          )}
           <p className="mt-1 text-xs font-extrabold text-[var(--brand-blue)]">
             {presentes}/{criancas.length} presentes
           </p>

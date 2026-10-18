@@ -7,7 +7,7 @@ import {
   updateFamiliaAction,
 } from "@/actions/familia";
 import { undoCheckinCriancaAction } from "@/actions/checkin";
-import type { CriancaInput, FamiliaFormData } from "@/lib/types";
+import type { AcompanhanteInput, CriancaInput, FamiliaFormData } from "@/lib/types";
 import { formatDateTime } from "@/lib/timezone";
 
 type Props = {
@@ -17,6 +17,10 @@ type Props = {
 
 function blankChild(): CriancaInput {
   return { nome: "", idade: "", presente: false };
+}
+
+function blankAcompanhante(): AcompanhanteInput {
+  return { nome: "", telefone: "" };
 }
 
 export function FamiliaForm({ mode, initial }: Props) {
@@ -29,6 +33,7 @@ export function FamiliaForm({ mode, initial }: Props) {
   const [form, setForm] = useState<FamiliaFormData>(
     initial ?? {
       nome: "",
+      ehColaborador: true,
       area: "",
       telefone: "",
       acompanhantes: [],
@@ -57,19 +62,21 @@ export function FamiliaForm({ mode, initial }: Props) {
   function addAcompanhante() {
     setForm((prev) => ({
       ...prev,
-      acompanhantes: [...prev.acompanhantes, ""],
+      acompanhantes: [...prev.acompanhantes, blankAcompanhante()],
     }));
   }
 
-  function updateAcompanhante(index: number, value: string) {
+  function updateAcompanhante(index: number, patch: Partial<AcompanhanteInput>) {
     setForm((prev) => ({
       ...prev,
-      acompanhantes: prev.acompanhantes.map((nome, i) => (i === index ? value : nome)),
+      acompanhantes: prev.acompanhantes.map((item, i) =>
+        i === index ? { ...item, ...patch } : item,
+      ),
     }));
   }
 
   function removeAcompanhante(index: number) {
-    const nome = form.acompanhantes[index]?.trim();
+    const nome = form.acompanhantes[index]?.nome?.trim();
     if (nome && !confirm(`Remover acompanhante ${nome}?`)) {
       return;
     }
@@ -146,6 +153,7 @@ export function FamiliaForm({ mode, initial }: Props) {
         setForm((prev) => ({
           ...prev,
           version: next.version,
+          ehColaborador: next.ehColaborador,
           acompanhantes: next.acompanhantes,
           criancas: next.criancas.map((serverChild) => ({
             id: serverChild.id,
@@ -203,6 +211,34 @@ export function FamiliaForm({ mode, initial }: Props) {
         </h2>
         <div className="grid gap-3">
           <div>
+            <span className="label">Tipo *</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className={`btn ${form.ehColaborador ? "btn-primary" : "btn-secondary"}`}
+                onClick={() => updateField("ehColaborador", true)}
+                disabled={pending}
+              >
+                Colaborador
+              </button>
+              <button
+                type="button"
+                className={`btn ${!form.ehColaborador ? "btn-primary" : "btn-secondary"}`}
+                onClick={() => {
+                  updateField("ehColaborador", false);
+                  updateField("area", "");
+                }}
+                disabled={pending}
+              >
+                Sem vínculo
+              </button>
+            </div>
+            <p className="mt-1.5 text-xs text-[var(--muted)]">
+              Use “Sem vínculo” quando a criança não estiver ligada a colaborador da empresa.
+            </p>
+          </div>
+
+          <div>
             <label className="label" htmlFor="nome">
               Nome completo *
             </label>
@@ -215,32 +251,35 @@ export function FamiliaForm({ mode, initial }: Props) {
               disabled={pending}
             />
           </div>
-          <div className="grid gap-3">
+
+          {form.ehColaborador && (
             <div>
               <label className="label" htmlFor="area">
-                Área / setor
+                Área / setor *
               </label>
               <input
                 id="area"
                 className="field"
                 value={form.area}
                 onChange={(e) => updateField("area", e.target.value)}
+                required={form.ehColaborador}
                 disabled={pending}
               />
             </div>
-            <div>
-              <label className="label" htmlFor="telefone">
-                Telefone / WhatsApp
-              </label>
-              <input
-                id="telefone"
-                className="field"
-                value={form.telefone}
-                onChange={(e) => updateField("telefone", e.target.value)}
-                disabled={pending}
-                inputMode="tel"
-              />
-            </div>
+          )}
+
+          <div>
+            <label className="label" htmlFor="telefone">
+              Telefone / WhatsApp
+            </label>
+            <input
+              id="telefone"
+              className="field"
+              value={form.telefone}
+              onChange={(e) => updateField("telefone", e.target.value)}
+              disabled={pending}
+              inputMode="tel"
+            />
           </div>
         </div>
       </section>
@@ -266,7 +305,7 @@ export function FamiliaForm({ mode, initial }: Props) {
           </p>
         ) : (
           <div className="flex flex-col gap-3">
-            {form.acompanhantes.map((nome, index) => (
+            {form.acompanhantes.map((item, index) => (
               <div
                 key={`acomp-${index}`}
                 className="rounded-[1rem] border border-[var(--line)] bg-[var(--bg-soft)] p-3"
@@ -284,14 +323,31 @@ export function FamiliaForm({ mode, initial }: Props) {
                     Remover
                   </button>
                 </div>
-                <label className="label">Nome</label>
-                <input
-                  className="field"
-                  value={nome}
-                  onChange={(e) => updateAcompanhante(index, e.target.value)}
-                  disabled={pending}
-                  placeholder="Nome do acompanhante"
-                />
+                <div className="grid gap-3">
+                  <div>
+                    <label className="label">Nome</label>
+                    <input
+                      className="field"
+                      value={item.nome}
+                      onChange={(e) => updateAcompanhante(index, { nome: e.target.value })}
+                      disabled={pending}
+                      placeholder="Nome do acompanhante"
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Telefone / WhatsApp</label>
+                    <input
+                      className="field"
+                      value={item.telefone}
+                      onChange={(e) =>
+                        updateAcompanhante(index, { telefone: e.target.value })
+                      }
+                      disabled={pending}
+                      inputMode="tel"
+                      placeholder="Número do acompanhante"
+                    />
+                  </div>
+                </div>
               </div>
             ))}
           </div>

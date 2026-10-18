@@ -132,15 +132,24 @@ async function main() {
 
     const area = cell(row, "Área", "Area", "Setor") || null;
     const telefone = cell(row, "Telefone", "WhatsApp", "Telefone / WhatsApp") || null;
-    const acompanhantes: string[] = [];
+    const acompanhantes: { nome: string; telefone: string | null }[] = [];
     for (let i = 1; i <= 10; i++) {
-      const acomp = cell(
+      const acompNome = cell(
         row,
         `Acompanhante 0${i}`,
         `Acompanhante ${i}`,
         `Acompanhante0${i}`,
       );
-      if (acomp) acompanhantes.push(acomp);
+      if (!acompNome) continue;
+      const acompTel =
+        cell(
+          row,
+          `Telefone Acompanhante 0${i}`,
+          `Telefone Acompanhante ${i}`,
+          `WhatsApp Acompanhante 0${i}`,
+          `WhatsApp Acompanhante ${i}`,
+        ) || null;
+      acompanhantes.push({ nome: acompNome, telefone: acompTel });
     }
     const dataInscricao = parseDate(
       cell(row, "Data de resposta", "Data", "Carimbo de data/hora"),
@@ -161,6 +170,7 @@ async function main() {
     await prisma.responsavel.create({
       data: {
         nome,
+        ehColaborador: true,
         area,
         telefone,
         acompanhantes,

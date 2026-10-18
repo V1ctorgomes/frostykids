@@ -39,8 +39,15 @@ export async function searchFamilias(q: string) {
        OR COALESCE(r.area, '') ILIKE ${like}
        OR c.nome ILIKE ${like}
        OR EXISTS (
-         SELECT 1 FROM unnest(r.acompanhantes) AS acomp
-         WHERE acomp ILIKE ${like}
+         SELECT 1
+         FROM jsonb_array_elements(
+           CASE
+             WHEN jsonb_typeof(r.acompanhantes::jsonb) = 'array' THEN r.acompanhantes::jsonb
+             ELSE '[]'::jsonb
+           END
+         ) AS elem
+         WHERE COALESCE(elem->>'nome', '') ILIKE ${like}
+            OR COALESCE(elem->>'telefone', '') ILIKE ${like}
        )
   `;
 

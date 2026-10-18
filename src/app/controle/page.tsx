@@ -88,8 +88,10 @@ export default async function ControlePage({ searchParams }: Props) {
               key={familia.id}
               id={familia.id}
               nome={familia.nome}
+              ehColaborador={familia.ehColaborador}
               area={familia.area}
               telefone={familia.telefone}
+              acompanhantes={familia.acompanhantes}
               criancas={familia.criancas}
             />
           ))}
