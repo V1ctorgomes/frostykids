@@ -5,21 +5,31 @@ const COOKIE_NAME = "frostykids_session";
 const COOKIE_MAX_AGE = 60 * 60 * 16; // 16 horas (dia do evento)
 
 function getSessionSecret() {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) {
-    throw new Error("SESSION_SECRET não configurado");
-  }
-  return secret;
+  return process.env.SESSION_SECRET?.trim() || "";
 }
 
 function sign(value: string) {
-  return createHmac("sha256", getSessionSecret()).update(value).digest("hex");
+  const secret = getSessionSecret();
+  if (!secret) {
+    throw new Error("SESSION_SECRET_MISSING");
+  }
+  return createHmac("sha256", secret).update(value).digest("hex");
+}
+
+export function authConfigError() {
+  if (!process.env.APP_PASSWORD?.trim()) {
+    return "APP_PASSWORD não está configurada na Vercel.";
+  }
+  if (!process.env.SESSION_SECRET?.trim()) {
+    return "SESSION_SECRET não está configurada na Vercel.";
+  }
+  return null;
 }
 
 export function verifyPassword(password: string) {
-  const expected = process.env.APP_PASSWORD;
+  const expected = process.env.APP_PASSWORD?.trim();
   if (!expected) {
-    throw new Error("APP_PASSWORD não configurado");
+    return false;
   }
 
   const a = Buffer.from(password);

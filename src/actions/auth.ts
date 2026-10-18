@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import {
+  authConfigError,
   createSession,
   destroySession,
   verifyPassword,
@@ -12,6 +13,11 @@ export async function loginAction(
   _prev: ActionResult | null,
   formData: FormData,
 ): Promise<ActionResult> {
+  const configError = authConfigError();
+  if (configError) {
+    return { ok: false, error: configError };
+  }
+
   const password = String(formData.get("password") ?? "");
 
   if (!password) {
@@ -22,7 +28,15 @@ export async function loginAction(
     return { ok: false, error: "Senha incorreta." };
   }
 
-  await createSession();
+  try {
+    await createSession();
+  } catch {
+    return {
+      ok: false,
+      error: "Não foi possível criar a sessão. Confira SESSION_SECRET na Vercel.",
+    };
+  }
+
   redirect("/controle");
 }
 
