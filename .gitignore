@@ -51,3 +51,11 @@ next-env.d.ts
 .cursor/
 .devin/
 prisma.config.ts
+
+# dados pessoais de importação (não versionar)
+dados/*.json
+dados/*.xlsx
+dados/*.xls
+dados/*.csv
+!dados/.gitkeep
+

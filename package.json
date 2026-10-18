@@ -12,6 +12,7 @@
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "import": "tsx scripts/import-planilha.ts",
+    "import:json": "tsx scripts/import-json-lote.ts",
     "docker:up": "docker compose up --build -d",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f web",
