@@ -1,10 +1,13 @@
 /**
- * Importa o lote JSON gerado a partir da planilha do evento.
+ * Importa o lote JSON corrigido (formato v2).
  *
  * Uso:
  *   npx tsx scripts/import-json-lote.ts ./dados/controle-kids-importacao.json
  *
- * Idempotente via importKey = origem_ref.
+ * Flags:
+ *   --wipe  apaga todos os cadastros antes de importar
+ *
+ * Idempotente via importKey = chaveImportacao.
  */
 
 import { readFileSync } from "fs";
@@ -13,71 +16,97 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-type FamiliaLote = {
-  origem_ref: string;
+type Registro = {
+  chaveImportacao: string;
   responsavel: {
     nome: string;
     area: string | null;
     telefone: string | null;
     acompanhante01: string | null;
     acompanhante02: string | null;
-    dataInscricao_original: string | null;
+    dataInscricao: string | null;
   };
   criancas: { nome: string; idade: string | null }[];
 };
 
-type Lote = {
-  lote_importacao: string;
-  familias: FamiliaLote[];
+type LoteV2 = {
+  formato?: string;
+  totais?: { responsaveis: number; criancas: number };
+  registros: Registro[];
 };
 
 function isVoluntario(nome: string) {
   return /^volunt[aá]rio$/i.test(nome.trim());
 }
 
-function parseDataBr(value: string | null) {
-  if (!value) return null;
-  const match = value.trim().match(
-    /^(\d{2})\/(\d{2})\/(\d{4})(?:\s+(\d{2}):(\d{2}):(\d{2}))?$/,
-  );
-  if (!match) return null;
+function digitsOnly(value: string) {
+  return value.replace(/\D/g, "");
+}
 
-  const [, dd, mm, yyyy, hh = "00", min = "00", ss = "00"] = match;
-  // Interpreta como horário de Fortaleza (UTC-3) e grava em UTC.
-  const iso = `${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}-03:00`;
-  const date = new Date(iso);
+function normalizeTelefone(value: string | null) {
+  const d = digitsOnly(value ?? "");
+  return d.length > 0 ? d : null;
+}
+
+/** Extrai anos como número (máx. 2 dígitos). Ex.: "08 anos" → "8" */
+function normalizeIdade(value: string | null) {
+  if (!value?.trim()) return null;
+  const match = value.trim().match(/(\d{1,2})/);
+  if (!match) return null;
+  return String(Number(match[1]));
+}
+
+function parseDataInscricao(value: string | null) {
+  if (!value?.trim()) return null;
+  const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
-function acompanhantesFrom(resp: FamiliaLote["responsavel"]) {
+function acompanhantesFrom(resp: Registro["responsavel"]) {
   const list: { nome: string; telefone: string | null }[] = [];
   for (const nome of [resp.acompanhante01, resp.acompanhante02]) {
-    if (nome && nome.trim()) {
+    if (nome?.trim()) {
       list.push({ nome: nome.trim(), telefone: null });
     }
   }
   return list;
 }
 
+async function wipeAll() {
+  await prisma.$transaction([
+    prisma.crianca.deleteMany(),
+    prisma.responsavel.deleteMany(),
+  ]);
+  console.log("Banco limpo (responsáveis e crianças removidos).");
+}
+
 async function main() {
-  const fileArg = process.argv[2];
+  const args = process.argv.slice(2);
+  const wipe = args.includes("--wipe");
+  const fileArg = args.find((a) => !a.startsWith("--"));
+
   if (!fileArg) {
     console.error(
-      "Uso: npx tsx scripts/import-json-lote.ts ./dados/controle-kids-importacao.json",
+      "Uso: npx tsx scripts/import-json-lote.ts ./dados/controle-kids-importacao.json [--wipe]",
     );
     process.exit(1);
   }
 
+  if (wipe) {
+    await wipeAll();
+  }
+
   const filePath = resolve(fileArg);
-  const lote = JSON.parse(readFileSync(filePath, "utf8")) as Lote;
+  const lote = JSON.parse(readFileSync(filePath, "utf8")) as LoteV2;
+  const registros = lote.registros ?? [];
 
   let created = 0;
   let skipped = 0;
   let childrenCreated = 0;
   let voluntarios = 0;
 
-  for (const familia of lote.familias) {
-    const importKey = familia.origem_ref;
+  for (const registro of registros) {
+    const importKey = registro.chaveImportacao;
     const existing = await prisma.responsavel.findUnique({
       where: { importKey },
       select: { id: true },
@@ -88,26 +117,27 @@ async function main() {
       continue;
     }
 
-    const resp = familia.responsavel;
+    const resp = registro.responsavel;
     const voluntario = isVoluntario(resp.nome);
     if (voluntario) voluntarios += 1;
 
-    const criancas = (familia.criancas ?? []).filter((c) => c.nome?.trim());
+    const criancas = (registro.criancas ?? []).filter((c) => c.nome?.trim());
 
     await prisma.responsavel.create({
       data: {
-        nome: resp.nome.trim(),
+        // VOLUNTARIO → nome vazio + sem vínculo
+        nome: voluntario ? "" : resp.nome.trim(),
         ehColaborador: !voluntario,
         area: voluntario ? null : resp.area?.trim() || null,
-        telefone: resp.telefone?.trim() || null,
+        telefone: normalizeTelefone(resp.telefone),
         acompanhantes: acompanhantesFrom(resp),
-        dataInscricao: parseDataBr(resp.dataInscricao_original),
+        dataInscricao: parseDataInscricao(resp.dataInscricao),
         importKey,
         version: 0,
         criancas: {
           create: criancas.map((c) => ({
             nome: c.nome.trim(),
-            idade: c.idade?.trim() || null,
+            idade: normalizeIdade(c.idade),
             presente: false,
             checkinEm: null,
             version: 0,
@@ -125,11 +155,16 @@ async function main() {
     prisma.crianca.count(),
   ]);
 
-  console.log(`Lote: ${lote.lote_importacao}`);
+  console.log(`Formato: ${lote.formato ?? "desconhecido"}`);
   console.log(`Criados agora: ${created} responsáveis · ${childrenCreated} crianças`);
   console.log(`Ignorados (já existiam): ${skipped}`);
-  console.log(`Marcados como sem vínculo (VOLUNTARIO): ${voluntarios}`);
+  console.log(`Sem vínculo (VOLUNTARIO → nome vazio): ${voluntarios}`);
   console.log(`Totais no banco: ${totalResp} responsáveis · ${totalKids} crianças`);
+  if (lote.totais) {
+    console.log(
+      `Esperado no lote: ${lote.totais.responsaveis} responsáveis · ${lote.totais.criancas} crianças`,
+    );
+  }
 }
 
 main()

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { normalizeIdadeInput } from "@/lib/idade";
+import { telefoneToStorage } from "@/lib/telefone";
 import {
   normalizeAcompanhantes,
   parseAcompanhantes,
@@ -22,7 +23,7 @@ function normalizeIdade(value: string | undefined | null) {
 }
 
 function validateForm(data: FamiliaFormData, isCreate: boolean) {
-  if (!data.nome.trim()) {
+  if (data.ehColaborador && !data.nome.trim()) {
     return "Nome do responsável é obrigatório.";
   }
 
@@ -80,11 +81,14 @@ export async function createFamiliaAction(
 
     const created = await prisma.responsavel.create({
       data: {
-        nome: data.nome.trim(),
+        nome: data.ehColaborador ? data.nome.trim() : data.nome.trim(),
         ehColaborador: Boolean(data.ehColaborador),
         area: data.ehColaborador ? emptyToNull(data.area) : null,
-        telefone: emptyToNull(data.telefone),
-        acompanhantes: normalizeAcompanhantes(data.acompanhantes),
+        telefone: telefoneToStorage(data.telefone),
+        acompanhantes: normalizeAcompanhantes(data.acompanhantes).map((a) => ({
+          nome: a.nome,
+          telefone: a.telefone ? telefoneToStorage(a.telefone) : null,
+        })),
         criancas: { create: criancas },
       },
       select: { id: true },
@@ -144,8 +148,11 @@ export async function updateFamiliaAction(
           nome: data.nome.trim(),
           ehColaborador: Boolean(data.ehColaborador),
           area: data.ehColaborador ? emptyToNull(data.area) : null,
-          telefone: emptyToNull(data.telefone),
-          acompanhantes: normalizeAcompanhantes(data.acompanhantes),
+          telefone: telefoneToStorage(data.telefone),
+          acompanhantes: normalizeAcompanhantes(data.acompanhantes).map((a) => ({
+            nome: a.nome,
+            telefone: a.telefone ? telefoneToStorage(a.telefone) : null,
+          })),
           version: { increment: 1 },
         },
       });

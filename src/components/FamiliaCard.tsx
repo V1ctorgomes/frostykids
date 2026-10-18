@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckinButtons } from "@/components/CheckinButtons";
 import { alertasCrianca } from "@/lib/alertas";
 import { formatIdadeDisplay } from "@/lib/idade";
+import { formatTelefoneDisplay } from "@/lib/telefone";
 import { formatDateTime } from "@/lib/timezone";
 import { parseAcompanhantes } from "@/lib/types";
 
@@ -63,17 +64,21 @@ export function FamiliaCard({
             </span>
           </div>
           <h2 className="truncate font-[family-name:var(--font-display)] text-[1.15rem] font-semibold leading-tight">
-            {nome}
+            {nome.trim() || "Sem colaborador"}
           </h2>
           <p className="mt-0.5 text-sm text-[var(--muted)]">
-            {[ehColaborador ? area : null, telefone].filter(Boolean).join(" · ") ||
-              "Sem área/telefone"}
+            {[ehColaborador ? area : null, formatTelefoneDisplay(telefone)]
+              .filter(Boolean)
+              .join(" · ") || "Sem área/telefone"}
           </p>
           {acompList.length > 0 && (
             <p className="mt-1 text-xs text-[var(--muted)]">
               Acomp.:{" "}
               {acompList
-                .map((a) => (a.telefone ? `${a.nome} (${a.telefone})` : a.nome))
+                .map((a) => {
+                  const tel = formatTelefoneDisplay(a.telefone);
+                  return tel ? `${a.nome} (${tel})` : a.nome;
+                })
                 .join(" · ")}
             </p>
           )}

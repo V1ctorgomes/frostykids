@@ -8,6 +8,7 @@ import {
 } from "@/actions/familia";
 import { undoCheckinCriancaAction } from "@/actions/checkin";
 import { normalizeIdadeInput } from "@/lib/idade";
+import { formatTelefoneBR } from "@/lib/telefone";
 import type { AcompanhanteInput, CriancaInput, FamiliaFormData } from "@/lib/types";
 import { formatDateTime } from "@/lib/timezone";
 
@@ -235,21 +236,22 @@ export function FamiliaForm({ mode, initial }: Props) {
               </button>
             </div>
             <p className="mt-1.5 text-xs text-[var(--muted)]">
-              Use “Sem vínculo” quando a criança não estiver ligada a colaborador da empresa.
+              Use “Sem vínculo” quando ainda não houver colaborador (ex.: voluntário). O nome pode ficar vazio.
             </p>
           </div>
 
           <div>
             <label className="label" htmlFor="nome">
-              Nome completo *
+              Nome completo {form.ehColaborador ? "*" : "(opcional)"}
             </label>
             <input
               id="nome"
               className="field"
               value={form.nome}
               onChange={(e) => updateField("nome", e.target.value)}
-              required
+              required={form.ehColaborador}
               disabled={pending}
+              placeholder={form.ehColaborador ? "Nome do colaborador" : "Pode deixar vazio"}
             />
           </div>
 
@@ -277,9 +279,12 @@ export function FamiliaForm({ mode, initial }: Props) {
               id="telefone"
               className="field"
               value={form.telefone}
-              onChange={(e) => updateField("telefone", e.target.value)}
+              onChange={(e) => updateField("telefone", formatTelefoneBR(e.target.value))}
               disabled={pending}
               inputMode="tel"
+              autoComplete="tel"
+              placeholder="(85) 99999-9999"
+              maxLength={16}
             />
           </div>
         </div>
@@ -341,11 +346,15 @@ export function FamiliaForm({ mode, initial }: Props) {
                       className="field"
                       value={item.telefone}
                       onChange={(e) =>
-                        updateAcompanhante(index, { telefone: e.target.value })
+                        updateAcompanhante(index, {
+                          telefone: formatTelefoneBR(e.target.value),
+                        })
                       }
                       disabled={pending}
                       inputMode="tel"
-                      placeholder="Número do acompanhante"
+                      autoComplete="tel"
+                      placeholder="(85) 99999-9999"
+                      maxLength={16}
                     />
                   </div>
                 </div>
@@ -457,13 +466,23 @@ export function FamiliaForm({ mode, initial }: Props) {
         <div className="rounded-[1rem] bg-[var(--danger-bg)] px-4 py-3 text-sm font-bold text-[var(--danger)]">
           <p>{error}</p>
           {conflict && (
-            <button
-              type="button"
-              className="mt-2 font-extrabold underline"
-              onClick={() => router.refresh()}
-            >
-              Atualizar dados do servidor
-            </button>
+            <div className="mt-2 space-y-2">
+              <p className="text-xs font-semibold normal-case text-[var(--danger)]">
+                Seus textos digitados foram mantidos. Recarregue só quando quiser
+                ver a versão do outro operador (isso substitui o formulário).
+              </p>
+              <button
+                type="button"
+                className="btn btn-danger min-h-10 px-3 text-sm"
+                onClick={() => {
+                  setConflict(false);
+                  setError(null);
+                  router.refresh();
+                }}
+              >
+                Recarregar versão do servidor
+              </button>
+            </div>
           )}
         </div>
       )}

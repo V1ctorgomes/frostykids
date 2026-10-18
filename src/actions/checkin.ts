@@ -8,7 +8,7 @@ import type { ActionResult } from "@/lib/types";
 export async function checkinCriancaAction(
   criancaId: string,
   version: number,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ version: number }>> {
   try {
     await requireAuth();
   } catch {
@@ -32,7 +32,7 @@ export async function checkinCriancaAction(
     if (result.count === 0) {
       const atual = await prisma.crianca.findUnique({
         where: { id: criancaId },
-        select: { presente: true },
+        select: { presente: true, version: true },
       });
 
       if (!atual) {
@@ -56,7 +56,11 @@ export async function checkinCriancaAction(
     }
 
     revalidatePath("/controle");
-    return { ok: true, message: "Check-in registrado." };
+    return {
+      ok: true,
+      data: { version: version + 1 },
+      message: "Check-in registrado.",
+    };
   } catch {
     return {
       ok: false,
@@ -68,7 +72,7 @@ export async function checkinCriancaAction(
 export async function undoCheckinCriancaAction(
   criancaId: string,
   version: number,
-): Promise<ActionResult> {
+): Promise<ActionResult<{ version: number }>> {
   try {
     await requireAuth();
   } catch {
@@ -99,8 +103,12 @@ export async function undoCheckinCriancaAction(
     }
 
     revalidatePath("/controle");
-    revalidatePath(`/cadastro/${criancaId}`);
-    return { ok: true, message: "Check-in desfeito." };
+    revalidatePath(`/cadastro`);
+    return {
+      ok: true,
+      data: { version: version + 1 },
+      message: "Check-in desfeito.",
+    };
   } catch {
     return {
       ok: false,

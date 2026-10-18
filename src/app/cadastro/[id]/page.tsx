@@ -5,6 +5,7 @@ import { FamiliaForm } from "@/components/FamiliaForm";
 import { requireAuth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { idadeToFormValue } from "@/lib/idade";
+import { formatTelefoneBR } from "@/lib/telefone";
 import { parseAcompanhantes } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -39,7 +40,9 @@ export default async function EditarCadastroPage({ params }: Props) {
       <h1 className="mb-1 font-[family-name:var(--font-display)] text-[1.65rem] font-semibold text-[var(--brand-blue)]">
         Editar cadastro
       </h1>
-      <p className="mb-4 text-sm text-[var(--muted)]">{familia.nome}</p>
+      <p className="mb-4 text-sm text-[var(--muted)]">
+        {familia.nome.trim() || "Sem colaborador"}
+      </p>
 
       <FamiliaForm
         mode="edit"
@@ -48,8 +51,11 @@ export default async function EditarCadastroPage({ params }: Props) {
           nome: familia.nome,
           ehColaborador: familia.ehColaborador,
           area: familia.area ?? "",
-          telefone: familia.telefone ?? "",
-          acompanhantes: parseAcompanhantes(familia.acompanhantes),
+          telefone: formatTelefoneBR(familia.telefone ?? ""),
+          acompanhantes: parseAcompanhantes(familia.acompanhantes).map((a) => ({
+            nome: a.nome,
+            telefone: formatTelefoneBR(a.telefone),
+          })),
           version: familia.version,
           criancas: familia.criancas.map((c) => ({
             id: c.id,
