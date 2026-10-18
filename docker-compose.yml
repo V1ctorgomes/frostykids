@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: frostykids
+      POSTGRES_PASSWORD: frostykids
+      POSTGRES_DB: frostykids
+    # Porta só na rede interna do Compose (evita conflito com Postgres local).
+    # Para acessar o banco do host: descomente e use 5433.
+    # ports:
+    #   - "5433:5432"
+    volumes:
+      - frostykids_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U frostykids -d frostykids"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "3080:3000"
+    environment:
+      DATABASE_URL: postgresql://frostykids:frostykids@db:5432/frostykids?schema=public
+      APP_PASSWORD: ${APP_PASSWORD:-frosty2026}
+      SESSION_SECRET: ${SESSION_SECRET:-frostykids-docker-secret-change-me}
+      NODE_ENV: production
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  frostykids_pg:

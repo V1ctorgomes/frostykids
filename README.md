@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Frosty Kids — Controle de crianças
 
-## Getting Started
+Aplicação mobile-first para cadastro, busca e check-in de crianças no evento Frosty.
 
-First, run the development server:
+## Stack
+
+- Next.js + TypeScript + Tailwind
+- Prisma + PostgreSQL
+- Auth por senha compartilhada
+- Pronto para Docker e Vercel
+
+## Identidade
+
+Cores oficiais Frosty:
+
+- Azul `#0034DB`
+- Verde `#46C42C`
+- Logo em `public/logo-frosty.svg`
+
+## Rodar com Docker (recomendado localmente)
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker compose up --build -d
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+App: http://localhost:3080  
+Senha padrão: `frosty2026` (altere com `APP_PASSWORD`)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+> A porta `3080` evita conflito com outros serviços locais. Para mudar, edite `ports` em `docker-compose.yml`.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Só o banco (para usar `npm run dev`):
 
-## Learn More
+```bash
+npm run docker:db
+cp .env.example .env   # se ainda não tiver
+npm install
+npm run db:push
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Importar planilha
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run import -- ./dados/sua-planilha.xlsx
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Deploy na Vercel
 
-## Deploy on Vercel
+1. Crie o projeto na Vercel e importe o repositório.
+2. Crie um banco Postgres (Prisma Postgres / Neon / Vercel Postgres).
+3. Configure as variáveis de ambiente:
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Variável | Descrição |
+|---|---|
+| `DATABASE_URL` | Connection string do Postgres |
+| `APP_PASSWORD` | Senha da equipe |
+| `SESSION_SECRET` | Segredo longo aleatório |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Deploy. O build já roda `prisma generate`.
+5. Após o primeiro deploy, sincronize o schema:
+
+```bash
+DATABASE_URL="sua-url-de-producao" npx prisma db push
+DATABASE_URL="sua-url-de-producao" npm run import -- ./dados/planilha.xlsx
+```
+
+Região sugerida: `gru1` (São Paulo) — já definida em `vercel.json`.
+
+## Uso no celular
+
+- Layout estreito (max ~28rem), botões grandes, dock fixo no rodapé
+- Fonte 16px nos inputs (sem zoom no iOS)
+- Safe-area para notch
+- Check-in com um toque por criança

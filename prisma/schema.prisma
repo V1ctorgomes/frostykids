@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Responsavel {
+  id            String    @id @default(cuid())
+  nome          String
+  area          String?
+  telefone      String?
+  acompanhantes String[]  @default([])
+  dataInscricao DateTime?
+  importKey     String?   @unique
+  version       Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  criancas      Crianca[]
+
+  @@index([nome])
+  @@index([telefone])
+}
+
+model Crianca {
+  id            String      @id @default(cuid())
+  responsavelId String
+  responsavel   Responsavel @relation(fields: [responsavelId], references: [id], onDelete: Cascade)
+  nome          String
+  idade         String?
+  presente      Boolean     @default(false)
+  checkinEm     DateTime?
+  version       Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([responsavelId])
+  @@index([nome])
+  @@index([presente])
+}

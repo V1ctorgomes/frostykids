@@ -1,0 +1,17 @@
+node_modules
+.next
+.git
+.gitignore
+*.md
+.env*
+!.env.example
+dados/*.xlsx
+dados/*.xls
+dados/*.csv
+.vercel
+coverage
+agent-transcripts
+.cursor
+.agents
+.claude
+.devin
