@@ -140,20 +140,25 @@ export default async function ControlePage({ searchParams }: Props) {
         )}
       </section>
 
-      <p className="mb-3 text-sm text-[var(--muted)]">
-        {filtradas.length} família{filtradas.length === 1 ? "" : "s"}
-        {!buscando && letra !== "TODOS" ? ` · letra ${letra}` : ""}
-        {buscando ? ` · busca “${q.trim()}”` : ""}
-        {" · "}ordem A–Z
-        {(buscando || letra !== "TODOS") && (
-          <>
-            {" · "}
-            <Link href="/controle" className="font-bold text-[var(--brand-blue)]">
-              Limpar filtros
-            </Link>
-          </>
-        )}
-      </p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm text-[var(--muted)]">
+          {filtradas.length} família{filtradas.length === 1 ? "" : "s"}
+          {!buscando && letra !== "TODOS" ? ` · letra ${letra}` : ""}
+          {buscando ? ` · busca “${q.trim()}”` : ""}
+          {" · "}ordem A–Z
+          {(buscando || letra !== "TODOS") && (
+            <>
+              {" · "}
+              <Link href="/controle" className="font-bold text-[var(--brand-blue)]">
+                Limpar filtros
+              </Link>
+            </>
+          )}
+        </p>
+        <a href="/api/exportar" className="btn btn-secondary px-3.5 text-sm">
+          Baixar Excel
+        </a>
+      </div>
 
       {pageItems.length === 0 ? (
         <div className="surface p-7 text-center text-[var(--muted)]">
